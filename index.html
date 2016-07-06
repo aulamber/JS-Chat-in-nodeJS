@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Socket.io</title>
+    </head>
+    <style type="">
+    	.chatBox {
+    		border-radius :5px;
+    		border: 2px solid black;
+    	}
+    	.divMessage {
+    		padding-left: 15px;
+    	}
+
+    	.divDate {
+    		color :gray;
+    		font-size:8px;
+    	}
+    	.leave {
+    		color: rgba(255, 0,0, .7);
+    	}
+    	.enter {
+    		color: rgba(0, 255,0, .7);
+    	}
+    </style>
+ 
+    <body>
+        <h1> Chat'app</h1>
+        <div class="chatBox">
+        	<div>Welcome to my chat!</div>
+        </div>
+        <form id="messageSend">
+        	<input type="textarea" id="messageBox" placeholder="Your message..."/>
+        	<input type="submit"  value="Send" />
+        </form>
+
+
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+        //get the chatbox, the messageBox and the form
+        	var chatBox = document.getElementsByClassName("chatBox")[0];
+        	var messageBox = document.getElementById("messageBox");
+        	var messageSend = document.getElementById("messageSend");
+
+        	//connection to the socket server
+            var socket = io.connect('http://localhost:8080');
+            //get user name
+            var name = prompt("Your nickname?");
+
+            // send user name to server and tell other users we are now online
+            socket.emit("addUser", name);
+
+            // if someone else logs in
+            socket.on("userConnection", function (name) {
+            	var div = document.createElement("div");
+            	div.innerHTML = name + " joined.";
+            	div.className = "enter";
+            	chatBox.appendChild(div);
+            });
+
+
+            messageSend.onsubmit = function (e) {
+            	// message to be sent
+            	var message = messageBox.value;
+
+            	// if the message is valid
+            	if (message) {
+            		// send it
+            		socket.emit("messageFromClient", message);
+            		//clears messagebox
+            		messageBox.value = "";
+            	}
+            	// prevents page reloading
+            	e.preventDefault();
+            };
+
+
+            // if someone sends a message
+            socket.on('messageFromServer', function (message) {
+            	var div = document.createElement('div');
+            	chatBox.appendChild(div);
+            	var divName = document.createElement('div');
+            	divName.innerHTML = message.name + " :";
+            	var divMessage = document.createElement('div');
+            	divMessage.innerHTML = message.content;
+            	var divDate = document.createElement('div');
+            	divDate.innerHTML = message.date;
+            	div.appendChild(divName);
+            	div.appendChild(divMessage);
+            	div.appendChild(divDate);
+            	divMessage.className = "divMessage";
+            	divDate.className = "divDate";
+
+            });
+
+            // if the server tells me that my message has been correctly sent to others
+            socket.on('messageConfirm', function (message) {
+             	var div = document.createElement('div');
+            	chatBox.appendChild(div);
+            	var divName = document.createElement('div');
+            	divName.innerHTML = message.name + " dit :";
+            	var divMessage = document.createElement('div');
+            	divMessage.innerHTML = message.content;
+            	divMessage.className = "divMessage";
+            	var divDate = document.createElement('div');
+            	divDate.innerHTML = message.date;
+            	divDate.className = "divDate";
+            	div.appendChild(divName);
+            	div.appendChild(divMessage);
+            	div.appendChild(divDate);
+            });
+
+            //alerts users and the server that we are leaving the chat
+            window.onbeforeunload = function () {
+            	socket.emit("removeUser");
+            };
+
+            // if someone leaves the chat
+            socket.on('userDisconnection', function (name) {
+            	var div = document.createElement("div");
+            	div.innerHTML = name + " left.";
+            	div.className = "leave";
+            	chatBox.appendChild(div);
+            });
+
+
+        </script>
+    </body>
+</html>
